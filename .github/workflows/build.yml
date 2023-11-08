@@ -1,0 +1,73 @@
+---
+name: build bandwhich
+run-name: build bandwhich-${{inputs.version}}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+        description: version to build (without "v")
+        default: 0.21.1
+        type: string
+
+permissions: write-all
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {target: aarch64-unknown-linux-gnu, os: ubuntu-latest, cross: true}
+          - {target: aarch64-unknown-linux-musl, os: ubuntu-latest, cross: true}
+          - {target: aarch64-apple-darwin, os: macos-latest, cross: false}
+
+    name: Build ${{matrix.target}}
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO: cargo
+      RUST_BACKTRACE: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          repository: imsnif/bandwhich
+          ref: v${{inputs.version}}
+
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+
+      - name: Install Cross
+        if: matrix.cross
+        run: |
+          cargo install cross --git https://github.com/cross-rs/cross.git
+          echo "CARGO=cross" >> $GITHUB_ENV
+
+      - name: Set profile.release.strip = true
+        shell: bash
+        run: |
+          mkdir -p $HOME/.cargo
+          cat >> $HOME/.cargo/config.toml <<EOF
+          [profile.release]
+          strip = true
+          EOF
+
+      - name: Build release binary
+        run: |-
+          ${{ env.CARGO }} build --release --locked --target ${{ matrix.target }}
+
+      - name: Upload ${{matrix.target}}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |-
+          mv "target/${{ matrix.target }}/release/bandwhich" ./bandwhich
+          tar -czf "bandwhich-v${{inputs.version}}-${{matrix.target}}.tar.gz" bandwhich
+          # create release if not exist
+          gh release create "v${{inputs.version}}" --notes "Release bandwhich v${{inputs.version}}" --title "v${{inputs.version}}" --repo "${{github.repository}}" || true
+          # delete the asset if exists
+          gh release delete-asset "v${{inputs.version}}" "bandwhich-v${{inputs.version}}-${{matrix.target}}.tar.gz" --yes --repo "${{github.repository}}" || true
+          gh release upload "v${{inputs.version}}" "./bandwhich-v${{inputs.version}}-${{matrix.target}}.tar.gz" --repo "${{github.repository}}"
