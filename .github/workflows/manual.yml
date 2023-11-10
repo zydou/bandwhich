@@ -1,5 +1,5 @@
 ---
-name: build bandwhich
+name: manual
 run-name: build bandwhich-${{inputs.version}}
 
 on:
@@ -22,7 +22,9 @@ jobs:
           - {target: aarch64-unknown-linux-gnu, os: ubuntu-latest, cross: true}
           - {target: aarch64-unknown-linux-musl, os: ubuntu-latest, cross: true}
           - {target: aarch64-apple-darwin, os: macos-latest, cross: false}
-
+          - {target: x86_64-unknown-linux-gnu, os: ubuntu-latest, cross: false}
+          - {target: x86_64-unknown-linux-musl, os: ubuntu-latest, cross: false}
+          - {target: x86_64-apple-darwin, os: macos-latest, cross: false}
     name: Build ${{matrix.target}}
     runs-on: ${{ matrix.os }}
     env:
