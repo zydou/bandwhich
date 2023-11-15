@@ -1,3 +1,6 @@
+> [!WARNING]
+> This repository is no longer maintained and has been migrated to [zydou/cli-tools](https://github.com/zydou/cli-tools).
+
 # bandwhich
 
 This repository uses GitHub Actions to build the `bandwhich` tool.
